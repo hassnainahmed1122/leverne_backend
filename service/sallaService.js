@@ -6,17 +6,15 @@ const getOrderDetails = async (order_number) => {
 
     const config = {
         method: 'get',
-        url: `https://api.salla.dev/admin/v2/orders/?reference_id=${order_number}`,
+        url: `https://api.salla.dev/admin/v2/orders/${order_number}`,
         headers: {
-            'User-Agent': 'Apidog/1.0.0 (https://apidog.com)',
             'Authorization': `Bearer ${authToken}`
         }
     };
 
     try {
         const response = await axios(config);
-        console.log('testing..............', response.data.data[0])
-        return response.data.data[0];
+        return response.data.data;
     } catch (err) {
         throw err;
     }

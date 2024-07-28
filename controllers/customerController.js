@@ -11,7 +11,6 @@ exports.login = async (req, res) => {
     try {
         const orderDetails = await getOrderDetails(order_number);
         const { items, customer } = orderDetails;
-
         if (items && items.length > 0) {
             res.status(200).json({ message: "Order found" });
         } else {
