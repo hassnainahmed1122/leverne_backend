@@ -1,18 +1,23 @@
 require('dotenv').config();
 const { loginSchema, verifyOtpSchema } = require('../validators/customerValidator');
-const { getOrderDetails } = require('../service/sallaService');
+const { getOrder } = require('../service/sallaService');
+const jobQueue = require('../queues/jobQueue');
 
 exports.login = async (req, res) => {
     const { error } = loginSchema.validate(req.body);
     if (error) {
         return res.status(400).json({ message: error.details[0].message });
     }
+
     const { phoneNumber, order_number } = req.body;
+
     try {
-        const orderDetails = await getOrderDetails(order_number);
-        const { items, customer } = orderDetails;
-        if (items && items.length > 0) {
-            res.status(200).json({ message: "Order found" });
+        const order_by_reference = await getOrder(order_number);
+        const { id } = order_by_reference;
+        if (id) {
+            await jobQueue.add('job1', { orderId: id });
+
+            res.status(200).json({ message: "Order found and jobs added to the queue" });
         } else {
             res.status(404).json({ message: 'Order not found' });
         }
