@@ -2,6 +2,7 @@ const express = require('express');
 const { Sequelize } = require('sequelize');
 const cors = require('cors');
 const models = require('./models');
+const customerRoutes = require('./routes/customerRoutes');
 require('dotenv').config();
 
 const app = express();
@@ -23,14 +24,11 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
-
 app.use(cors(corsOptions));
-
 app.use(express.json());
 
-app.get('/', async (req, res) => {
-  res.json({ 'text': "welcome" })
-});
+// Use the customer routes
+app.use('/api/v1/customer', customerRoutes);
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
