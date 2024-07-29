@@ -1,5 +1,5 @@
 const { Queue, Worker, QueueEvents } = require('bullmq');
-const { job1Processor, job2Processor, job3Processor } = require('../jobs/job_processor.js');
+const { job1Processor } = require('../jobs/job_processor.js');
 const config = require('../config/config.js');
 const env = process.env.NODE_ENV || 'development';
 const redisConfig = config[env].redis;
@@ -13,12 +13,6 @@ const worker = new Worker('jobQueue', async job => {
         case 'job1':
             await job1Processor(job);
             break;
-        case 'job2':
-            await job2Processor(job);
-            break;
-        case 'job3':
-            await job3Processor(job);
-            break;
         default:
             console.log('Unknown job:', job.name);
     }
@@ -31,11 +25,11 @@ const queueEvents = new QueueEvents('jobQueue', {
     connection: redisConfig
 });
 
-queueEvents.on('completed', (jobId) => {
+queueEvents.on('completed', ({ jobId }) => {
     console.log(`Job ${jobId} completed successfully`);
 });
 
-queueEvents.on('failed', (jobId, err) => {
+queueEvents.on('failed', ({jobId}, err) => {
     console.log(`Job ${jobId} failed with error: ${err.message}`);
 });
 
