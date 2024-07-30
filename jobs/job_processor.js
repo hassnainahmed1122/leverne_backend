@@ -1,8 +1,9 @@
 const { getOrderDetails } = require("../service/sallaService");
 const { sequelize, Customer, Order, Product, OrderItem } = require('../models');
 const { handleOtpGeneration } = require('../service/smsService');
+
 async function job1Processor(job) {
-    if (!job.data || !job.data.orderId) {
+    if (!job.data || !job.data.orderId || !job.data.customerId) {
         throw new Error('Invalid job data');
     }
 
@@ -13,20 +14,6 @@ async function job1Processor(job) {
         const totalDiscount = orderDetails.amounts.discounts.reduce((sum, item) => {
             return sum + parseFloat(item.discount);
         }, 0);
-
-        const customerData = {
-            salla_customer_id: orderDetails.customer.id,
-            first_name: orderDetails.customer.first_name,
-            last_name: orderDetails.customer.last_name,
-            email: orderDetails.customer.email,
-            mobile_number: String(orderDetails.customer.mobile_code) + String(orderDetails.customer.mobile)
-        };
-
-        const [customer, customerCreated] = await Customer.findOrCreate({
-            where: { salla_customer_id: customerData.salla_customer_id },
-            defaults: customerData,
-            transaction
-        });
 
         const orderData = {
             salla_order_id: orderDetails.id,
@@ -39,7 +26,7 @@ async function job1Processor(job) {
             tax_amount: orderDetails.amounts.tax.amount,
             discount_amount: totalDiscount,
             salla_reference_id: orderDetails.reference_id,
-            customer_id: customer.id, // Foreign key to Customer
+            customer_id: job.data.customerId, // Use customer ID from job data
         };
 
         // Insert order data
@@ -86,7 +73,7 @@ async function job1Processor(job) {
 
         await transaction.commit();
 
-        await handleOtpGeneration(customer.id, customer.mobile_number);
+        await handleOtpGeneration(job.data.customerId, job.data.mobileNumber);
 
     } catch (err) {
         await transaction.rollback();

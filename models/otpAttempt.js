@@ -21,14 +21,6 @@ module.exports = (sequelize, DataTypes) => {
         updatedAt: {
             type: DataTypes.DATE,
             defaultValue: DataTypes.NOW
-        },
-        user_id: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            references: {
-                model: 'Customers',
-                key: 'id'
-            }
         }
     }, {
         tableName: 'OtpAttempts',
@@ -36,7 +28,6 @@ module.exports = (sequelize, DataTypes) => {
     });
 
     OtpAttempt.associate = function (models) {
-        OtpAttempt.belongsTo(models.Customer, { foreignKey: 'user_id', as: 'customer' });
     };
 
     OtpAttempt.checkAttemptLimit = async function (mobile_number) {

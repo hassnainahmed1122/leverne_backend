@@ -15,7 +15,6 @@ const handleOtpGeneration = async (userId, mobileNumber) => {
                 mobile_number: mobileNumber,
                 otp: otp,
                 otp_expiration: otpExpiration,
-                user_id: userId
             });
 
             console.log('OTP generated and SMS sent successfully');
