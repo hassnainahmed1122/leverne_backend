@@ -1,6 +1,6 @@
 const { getOrderDetails } = require("../service/sallaService");
-const { sequelize, Customer, Order, Product, OrderItem } = require('../models'); // Adjust the path as necessary
-
+const { sequelize, Customer, Order, Product, OrderItem } = require('../models');
+const { handleOtpGeneration } = require('../service/smsService');
 async function job1Processor(job) {
     if (!job.data || !job.data.orderId) {
         throw new Error('Invalid job data');
@@ -13,7 +13,7 @@ async function job1Processor(job) {
         const totalDiscount = orderDetails.amounts.discounts.reduce((sum, item) => {
             return sum + parseFloat(item.discount);
         }, 0);
-        
+
         const customerData = {
             salla_customer_id: orderDetails.customer.id,
             first_name: orderDetails.customer.first_name,
@@ -22,7 +22,6 @@ async function job1Processor(job) {
             mobile_number: String(orderDetails.customer.mobile_code) + String(orderDetails.customer.mobile)
         };
 
-        // Insert customer data
         const [customer, customerCreated] = await Customer.findOrCreate({
             where: { salla_customer_id: customerData.salla_customer_id },
             defaults: customerData,
@@ -60,7 +59,6 @@ async function job1Processor(job) {
             gtin: item.product.gtin
         }));
 
-        // Insert product data
         const insertedProducts = await Promise.all(products.map(async productData => {
             return Product.findOrCreate({
                 where: { salla_product_id: productData.salla_product_id },
@@ -70,12 +68,11 @@ async function job1Processor(job) {
         }));
 
         const orderItems = orderDetails.items.map((item, index) => ({
-            order_id: order.id, // Foreign key to Order
-            product_id: insertedProducts[index].id, // Foreign key to Product
+            order_id: order.id,
+            product_id: insertedProducts[index].id,
             quantity: item.quantity
         }));
 
-        // Insert order item data
         await Promise.all(orderItems.map(async orderItemData => {
             await OrderItem.findOrCreate({
                 where: {
@@ -87,13 +84,13 @@ async function job1Processor(job) {
             });
         }));
 
-        // Commit the transaction
         await transaction.commit();
-        console.log('Data inserted successfully');
+
+        await handleOtpGeneration(customer.id, customer.mobile_number);
+
     } catch (err) {
-        // Rollback the transaction in case of error
         await transaction.rollback();
-        console.error('Error inserting data:', err);
+        console.error('Error processing job:', err);
         throw err;
     }
 }

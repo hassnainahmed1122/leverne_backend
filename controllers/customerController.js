@@ -2,6 +2,7 @@ require('dotenv').config();
 const { loginSchema, verifyOtpSchema } = require('../validators/customerValidator');
 const { getOrder } = require('../service/sallaService');
 const jobQueue = require('../queues/jobQueue');
+const { OtpAttempt } = require('../models'); 
 
 exports.login = async (req, res) => {
     const { error } = loginSchema.validate(req.body);
@@ -37,6 +38,30 @@ exports.verifyOtp = async (req, res) => {
         return res.status(400).json({ message: error.details[0].message });
     }
 
-    const { otp } = req.body;
-    res.json({ message: "OTP verification endpoint", otp });
+    const { phoneNumber, otp } = req.body;
+
+    try {
+        const otpAttempt = await OtpAttempt.findOne({
+            where: {
+                mobile_number: phoneNumber,
+                otp: otp
+            }
+        });
+
+        if (!otpAttempt) {
+            return res.status(404).json({ message: 'Invalid OTP' });
+        }
+
+        await OtpAttempt.destroy({
+            where: {
+                mobile_number: phoneNumber
+            }
+        });
+
+        res.status(200).json({ message: 'OTP verified successfully' });
+    } catch (err) {
+        console.error('Error verifying OTP:', err);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
 };
+

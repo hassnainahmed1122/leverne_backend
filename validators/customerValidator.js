@@ -17,6 +17,13 @@ const loginSchema = Joi.object({
 });
 
 const verifyOtpSchema = Joi.object({
+    phoneNumber: Joi.string()
+        .pattern(/^\+9665\d{8}$/)
+        .required()
+        .messages({
+            'string.pattern.base': 'Invalid phone number, it should start with +9665 followed by 8 digits',
+            'any.required': 'Phone number is required'
+        }),
     otp: Joi.string()
         .length(6)
         .pattern(/^\d+$/)
