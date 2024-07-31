@@ -6,15 +6,6 @@ const { authenticate } = require('../middlewares/authMiddleware');
 
 router.post('/login', checkOtpAttemptLimit, customerController.login);
 router.post('/verify-otp', checkOtpExpiration, customerController.verifyOtp);
-
-router.get('/test-session', authenticate, async (req, res) => {
-    try {
-        const customerId = req.customerId;
-        res.status(200).json({ message: 'Token is valid', customerId: customerId });
-    } catch (err) {
-        console.error('Error in /test-session route:', err);
-        res.status(500).json({ message: 'Internal Server Error' });
-    }
-});
+router.get('/order-details', authenticate, customerController.getOrderDetails);
 
 module.exports = router;

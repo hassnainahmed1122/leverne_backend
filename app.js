@@ -4,6 +4,7 @@ const cors = require('cors');
 const models = require('./models');
 const customerRoutes = require('./routes/customerRoutes');
 require('dotenv').config();
+const jobQueue = require('./queues/jobQueue');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -29,6 +30,22 @@ app.use(express.json());
 
 // Use the customer routes
 app.use('/api/v1/customer', customerRoutes);
+
+async function addEmailToQueue() {
+  await jobQueue.add('sendEmail');
+}
+
+app.post('/send-test-email', async (req, res) => {
+
+  try {
+      await addEmailToQueue();
+      res.status(200).json({ message: 'Email job added to the queue' });
+  } catch (err) {
+      console.error('Error adding email job to queue:', err);
+      res.status(500).json({ message: 'Failed to add email job to the queue' });
+  }
+});
+
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);

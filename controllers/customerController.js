@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const { loginSchema, verifyOtpSchema } = require('../validators/customerValidator');
 const { getOrder } = require('../service/sallaService');
 const jobQueue = require('../queues/jobQueue');
-const { OtpAttempt, Session, Customer } = require('../models'); 
+const { OtpAttempt, Session, Customer, Order, OrderItem } = require('../models'); 
 
 exports.login = async (req, res) => {
     const { error } = loginSchema.validate(req.body);
@@ -33,7 +33,7 @@ exports.login = async (req, res) => {
 
             await jobQueue.add('job1', { orderId: id, customerId: customerRecord.id, mobileNumber: phoneNumber });
 
-            res.status(200).json({ message: "Order found and OTP sent" });
+            res.status(200).json({ message: "Order found and OTP sent", orderId: id });
         } else {
             res.status(404).json({ message: 'Order not found' });
         }
@@ -53,9 +53,10 @@ exports.verifyOtp = async (req, res) => {
         return res.status(400).json({ message: error.details[0].message });
     }
 
-    const { phoneNumber, otp } = req.body;
+    const { phoneNumber, otp, order_id } = req.body;
 
     try {
+        // Find the OTP attempt
         const otpAttempt = await OtpAttempt.findOne({
             where: {
                 mobile_number: phoneNumber,
@@ -67,12 +68,7 @@ exports.verifyOtp = async (req, res) => {
             return res.status(404).json({ message: 'Invalid OTP' });
         }
 
-        await OtpAttempt.destroy({
-            where: {
-                mobile_number: phoneNumber
-            }
-        });
-
+        // Find the customer
         const customer = await Customer.findOne({
             where: {
                 mobile_number: phoneNumber
@@ -83,25 +79,43 @@ exports.verifyOtp = async (req, res) => {
             return res.status(404).json({ message: 'Customer not found' });
         }
 
+        // Find the order
+        console.log('Order ID:', order_id); // Debug log
+        const order = await Order.findOne({
+            where: { salla_order_id: order_id }
+        });
+
+        if (!order) {
+            console.log('Order not found for salla_order_id:', order_id); // Debug log
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // Create token payload
         const tokenPayload = {
             customerId: customer.id,
-            phoneNumber: customer.mobile_number
+            phoneNumber: customer.mobile_number,
+            orderId: order.id
         };
 
+        // Generate JWT token
         const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '10m' });
 
+        // Find an existing session
         const existingSession = await Session.findOne({
             where: { customer_id: customer.id }
         });
 
+        // Update existing session or create a new one
         if (existingSession) {
             existingSession.token = token;
+            existingSession.order_id = order.id; // Ensure session is updated with the correct order_id
             existingSession.expires_at = new Date(Date.now() + 30 * 60 * 1000);
             await existingSession.save();
         } else {
             await Session.create({
                 customer_id: customer.id,
                 token: token,
+                order_id: order.id,
                 expires_at: new Date(Date.now() + 30 * 60 * 1000)
             });
         }
@@ -109,6 +123,28 @@ exports.verifyOtp = async (req, res) => {
         res.status(200).json({ message: 'OTP verified successfully', token: token });
     } catch (err) {
         console.error('Error verifying OTP:', err);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+exports.getOrderDetails = async (req, res) => {
+    try {
+        const orderId = req.orderId;
+
+        const order = await Order.findOne({
+            where: { id: orderId },
+            include: [{
+                model: OrderItem,
+            }]
+        });
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        res.status(200).json({ order });
+    } catch (err) {
+        console.error('Error fetching Order and OrderItems:', err);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };

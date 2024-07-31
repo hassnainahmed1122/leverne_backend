@@ -13,6 +13,16 @@ module.exports = (sequelize, DataTypes) => {
             onUpdate: 'CASCADE',
             onDelete: 'CASCADE'
         },
+        order_id: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            references: {
+                model: 'Orders',
+                key: 'id'
+            },
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE'
+        },
         token: {
             type: DataTypes.STRING,
             allowNull: false
@@ -35,6 +45,7 @@ module.exports = (sequelize, DataTypes) => {
 
     Session.associate = function (models) {
         Session.belongsTo(models.Customer, { foreignKey: 'customer_id' });
+        Session.belongsTo(models.Order, { foreignKey: 'order_id' });
     };
 
     return Session;

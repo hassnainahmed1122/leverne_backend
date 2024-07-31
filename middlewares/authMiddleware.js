@@ -23,6 +23,7 @@ const authenticate = async (req, res, next) => {
         }
 
         req.customerId = session.customer_id;
+        req.orderId = session.order_id;
         next();
     } catch (err) {
         console.error('Error in authentication middleware:', err);

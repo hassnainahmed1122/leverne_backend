@@ -32,6 +32,12 @@ const verifyOtpSchema = Joi.object({
             'string.length': 'OTP must be exactly 6 digits long',
             'string.pattern.base': 'OTP must contain only digits',
             'any.required': 'OTP is required'
+        }),
+    order_id: Joi.number()
+        .required()
+        .messages({
+            'number.base': 'Order number must be a number',
+            'any.required': 'Order number is required'
         })
 });
 

@@ -23,10 +23,10 @@ async function job1Processor(job) {
             sub_total: orderDetails.amounts.sub_total.amount,
             shipping_cost: orderDetails.amounts.shipping_cost.amount,
             cash_on_delivery: orderDetails.amounts.cash_on_delivery.amount,
-            tax_amount: orderDetails.amounts.tax.amount,
+            tax_amount: orderDetails.amounts.tax.amount.amount,
             discount_amount: totalDiscount,
             salla_reference_id: orderDetails.reference_id,
-            customer_id: job.data.customerId, // Use customer ID from job data
+            customer_id: job.data.customerId, 
         };
 
         // Insert order data
@@ -36,15 +36,16 @@ async function job1Processor(job) {
             transaction
         });
 
-        const products = orderDetails.items.map(item => ({
-            salla_product_id: item.product.id,
+        const products = orderDetails.items.map(item => {
+        console.log('iteting.................................', item.amounts.tax.amount.amount)
+        return { salla_product_id: item.product.id,
             price: item.amounts.price_without_tax.amount,
             thumbnail: item.product.thumbnail,
             SKU: item.sku,
             tax: item.amounts.tax.amount.amount,
             discount: item.amounts.total_discount.amount,
             gtin: item.product.gtin
-        }));
+        }});
 
         const insertedProducts = await Promise.all(products.map(async productData => {
             return Product.findOrCreate({
