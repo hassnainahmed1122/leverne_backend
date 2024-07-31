@@ -31,18 +31,15 @@ app.use(express.json());
 // Use the customer routes
 app.use('/api/v1/customer', customerRoutes);
 
-async function addEmailToQueue() {
-  await jobQueue.add('sendEmail');
-}
-
-app.post('/send-test-email', async (req, res) => {
+app.post('/send-email', async (req, res) => {
+  const { to, subject, html, text } = req.body;
 
   try {
-      await addEmailToQueue();
-      res.status(200).json({ message: 'Email job added to the queue' });
+      await jobQueue.add('sendEmail', { to, subject, html, text });
+      res.status(200).json({ message: 'Email job added to queue' });
   } catch (err) {
-      console.error('Error adding email job to queue:', err);
-      res.status(500).json({ message: 'Failed to add email job to the queue' });
+      console.error('Error adding email job to queue:', err.message);
+      res.status(500).json({ message: 'Internal Server Error' });
   }
 });
 
