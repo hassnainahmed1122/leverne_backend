@@ -10,10 +10,9 @@ async function send365Email({ to, subject, html, text }) {
             user: process.env.EMAIL_USER, 
             pass: process.env.EMAIL_PASSWORD 
         },
-        secure: false,
-        debug: true,
-        logger:true,
-        tls: { ciphers: 'SSLv3' }
+        tls: {
+            ciphers: 'SSLv3'
+        }
     };
 
     const mailTransport = nodemailer.createTransport(transportOptions);
