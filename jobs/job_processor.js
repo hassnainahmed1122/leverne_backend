@@ -29,7 +29,6 @@ async function job1Processor(job) {
             customer_id: job.data.customerId, 
         };
 
-        // Insert order data
         const [order, orderCreated] = await Order.findOrCreate({
             where: { salla_order_id: orderData.salla_order_id },
             defaults: orderData,
@@ -37,7 +36,6 @@ async function job1Processor(job) {
         });
 
         const products = orderDetails.items.map(item => {
-        console.log('iteting.................................', item.amounts.tax.amount.amount)
         return { salla_product_id: item.product.id,
             price: item.amounts.price_without_tax.amount,
             thumbnail: item.product.thumbnail,
