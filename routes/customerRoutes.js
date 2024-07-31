@@ -7,5 +7,6 @@ const { authenticate } = require('../middlewares/authMiddleware');
 router.post('/login', checkOtpAttemptLimit, customerController.login);
 router.post('/verify-otp', checkOtpExpiration, customerController.verifyOtp);
 router.get('/order-details', authenticate, customerController.getOrderDetails);
+router.post('/refund-requests', authenticate, customerController.createRefundRequest);
 
 module.exports = router;

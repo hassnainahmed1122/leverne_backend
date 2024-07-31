@@ -1,9 +1,9 @@
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
-const { loginSchema, verifyOtpSchema } = require('../validators/customerValidator');
+const { loginSchema, verifyOtpSchema, refundRequestSchema } = require('../validators/customerValidator');
 const { getOrder } = require('../service/sallaService');
 const jobQueue = require('../queues/jobQueue');
-const { OtpAttempt, Session, Customer, Order, OrderItem } = require('../models'); 
+const { OtpAttempt, Session, Customer, Order, OrderItem, RefundRequest, RefundItem ,sequelize } = require('../models'); 
 
 exports.login = async (req, res) => {
     const { error } = loginSchema.validate(req.body);
@@ -56,7 +56,6 @@ exports.verifyOtp = async (req, res) => {
     const { phoneNumber, otp, order_id } = req.body;
 
     try {
-        // Find the OTP attempt
         const otpAttempt = await OtpAttempt.findOne({
             where: {
                 mobile_number: phoneNumber,
@@ -68,7 +67,6 @@ exports.verifyOtp = async (req, res) => {
             return res.status(404).json({ message: 'Invalid OTP' });
         }
 
-        // Find the customer
         const customer = await Customer.findOne({
             where: {
                 mobile_number: phoneNumber
@@ -79,18 +77,14 @@ exports.verifyOtp = async (req, res) => {
             return res.status(404).json({ message: 'Customer not found' });
         }
 
-        // Find the order
-        console.log('Order ID:', order_id); // Debug log
         const order = await Order.findOne({
             where: { salla_order_id: order_id }
         });
 
         if (!order) {
-            console.log('Order not found for salla_order_id:', order_id); // Debug log
             return res.status(404).json({ message: 'Order not found' });
         }
 
-        // Create token payload
         const tokenPayload = {
             customerId: customer.id,
             phoneNumber: customer.mobile_number,
@@ -146,5 +140,45 @@ exports.getOrderDetails = async (req, res) => {
     } catch (err) {
         console.error('Error fetching Order and OrderItems:', err);
         res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+
+
+exports.createRefundRequest = async (req, res) => {
+    const { error } = refundRequestSchema.validate(req.body);
+    if (error) {
+        return res.status(400).json({ error: error.details[0].message });
+    }
+
+    const { iban, city, reason, condition, items } = req.body;
+
+    if (!items || !Array.isArray(items)) {
+        return res.status(400).json({ error: 'Invalid input' });
+    }
+
+    const transaction = await sequelize.transaction();
+
+    try {
+        const refundRequest = await RefundRequest.create({
+            customer_id: req.customerId,
+            order_id: req.orderId,
+            iban,
+            city,
+            reason,
+            condition,
+        }, { transaction });
+        await transaction.commit();
+
+        await jobQueue.add('createRefundItems', {
+            refundRequestId: refundRequest.id,
+            items,
+            orderId: req.orderId
+        });
+
+        res.status(201).json(refundRequest);
+    } catch (err) {
+        await transaction.rollback();
+        res.status(500).json({ error: 'Internal Server Error', message: err.message });
     }
 };
