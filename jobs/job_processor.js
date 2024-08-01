@@ -40,7 +40,7 @@ async function job1Processor(job) {
             price: item.amounts.price_without_tax.amount,
             thumbnail: item.product.thumbnail,
             SKU: item.sku,
-            tax: item.amounts.tax.amount.amount,
+            tax: item.amounts.tax.amount.amount / item.quantity,
             discount: item.amounts.total_discount.amount,
             gtin: item.product.gtin
         }});
