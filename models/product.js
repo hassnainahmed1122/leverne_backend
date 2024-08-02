@@ -9,6 +9,7 @@ module.exports = (sequelize, DataTypes) => {
     tax: DataTypes.FLOAT,
     discount: DataTypes.FLOAT,
     gtin: DataTypes.STRING,
+    name: DataTypes.STRING,
   }, {});
 
   Product.associate = function(models) {

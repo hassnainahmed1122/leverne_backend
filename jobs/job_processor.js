@@ -40,9 +40,10 @@ async function job1Processor(job) {
             price: item.amounts.price_without_tax.amount,
             thumbnail: item.product.thumbnail,
             SKU: item.sku,
-            tax: item.amounts.tax.amount.amount / item.quantity,
-            discount: item.amounts.total_discount.amount,
-            gtin: item.product.gtin
+            tax: (item.amounts.tax.amount.amount / item.quantity).toFixed(2),
+            discount: (item.amounts.total_discount.amount / item.quantity).toFixed(2),
+            gtin: item.product.gtin,
+            name: item.name
         }});
 
         const insertedProducts = await Promise.all(products.map(async productData => {

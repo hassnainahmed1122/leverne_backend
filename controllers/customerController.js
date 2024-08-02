@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const { loginSchema, verifyOtpSchema, refundRequestSchema } = require('../validators/customerValidator');
 const { getOrder } = require('../service/sallaService');
 const jobQueue = require('../queues/jobQueue');
-const { OtpAttempt, Session, Customer, Order, OrderItem, RefundRequest, RefundItem ,sequelize } = require('../models'); 
+const { OtpAttempt, Session, Customer, Order, OrderItem, RefundRequest, RefundItem, sequelize, Product } = require('../models');
 
 exports.login = async (req, res) => {
     const { error } = loginSchema.validate(req.body);
@@ -15,28 +15,35 @@ exports.login = async (req, res) => {
 
     try {
         const order_by_reference = await getOrder(order_number);
+
+        if (!order_by_reference || !order_by_reference.id) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
         const { id, customer } = order_by_reference;
 
-        if (id) {
-            const customerData = {
-                salla_customer_id: customer.id,
-                first_name: customer.first_name,
-                last_name: customer.last_name,
-                email: customer.email,
-                mobile_number: String(customer.mobile_code) + String(customer.mobile)
-            };
+        const customerMobileNumber = `${customer.mobile_code}${customer.mobile}`;
 
-            const [customerRecord] = await Customer.findOrCreate({
-                where: { salla_customer_id: customerData.salla_customer_id },
-                defaults: customerData
-            });
-
-            await jobQueue.add('job1', { orderId: id, customerId: customerRecord.id, mobileNumber: phoneNumber });
-
-            res.status(200).json({ message: "Order found and OTP sent", orderId: id });
-        } else {
-            res.status(404).json({ message: 'Order not found' });
+        if (customerMobileNumber !== phoneNumber) {
+            return res.status(400).json({ message: "Customer number doesn't match" });
         }
+
+        const customerData = {
+            salla_customer_id: customer.id,
+            first_name: customer.first_name,
+            last_name: customer.last_name,
+            email: customer.email,
+            mobile_number: customerMobileNumber,
+        };
+
+        const [customerRecord] = await Customer.findOrCreate({
+            where: { salla_customer_id: customerData.salla_customer_id },
+            defaults: customerData,
+        });
+
+        await jobQueue.add('job1', { orderId: id, customerId: customerRecord.id, mobileNumber: phoneNumber });
+
+        res.status(200).json({ message: 'Order found and OTP sent', orderId: id });
     } catch (err) {
         console.error('Error fetching order:', err);
         if (err.response && err.response.status === 404) {
@@ -46,6 +53,7 @@ exports.login = async (req, res) => {
         }
     }
 };
+
 
 exports.verifyOtp = async (req, res) => {
     const { error } = verifyOtpSchema.validate(req.body);
@@ -91,18 +99,15 @@ exports.verifyOtp = async (req, res) => {
             orderId: order.id
         };
 
-        // Generate JWT token
-        const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '10m' });
+        const token = jwt.sign(tokenPayload, process.env.JWT_SECRET);
 
-        // Find an existing session
         const existingSession = await Session.findOne({
             where: { customer_id: customer.id }
         });
 
-        // Update existing session or create a new one
         if (existingSession) {
             existingSession.token = token;
-            existingSession.order_id = order.id; // Ensure session is updated with the correct order_id
+            existingSession.order_id = order.id;
             existingSession.expires_at = new Date(Date.now() + 30 * 60 * 1000);
             await existingSession.save();
         } else {
@@ -127,9 +132,21 @@ exports.getOrderDetails = async (req, res) => {
 
         const order = await Order.findOne({
             where: { id: orderId },
-            include: [{
-                model: OrderItem,
-            }]
+            include: [
+                {
+                    model: OrderItem,
+                    include: [
+                        {
+                            model: Product,
+                            attributes: ['salla_product_id', 'price', 'thumbnail', 'SKU', 'tax', 'discount', 'gtin', 'name']
+                        }
+                    ]
+                },
+                {
+                    model: Customer,  
+                    attributes: ['first_name', 'last_name', 'email']
+                }
+            ]
         });
 
         if (!order) {
@@ -142,6 +159,8 @@ exports.getOrderDetails = async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
+
+
 
 
 
