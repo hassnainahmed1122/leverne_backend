@@ -138,7 +138,7 @@ exports.getOrderDetails = async (req, res) => {
                     include: [
                         {
                             model: Product,
-                            attributes: ['salla_product_id', 'price', 'thumbnail', 'SKU', 'tax', 'discount', 'gtin', 'name']
+                            attributes: ['id','salla_product_id', 'price', 'thumbnail', 'SKU', 'tax', 'discount', 'gtin', 'name', 'tax_percentage']
                         }
                     ]
                 },
@@ -170,7 +170,7 @@ exports.createRefundRequest = async (req, res) => {
         return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { iban, city, reason, condition, items } = req.body;
+    const { iban, city, reason, condition, first_name, last_name, family_name, email, refund_amount, items, payment_method } = req.body;
 
     if (!items || !Array.isArray(items)) {
         return res.status(400).json({ error: 'Invalid input' });
@@ -186,7 +186,14 @@ exports.createRefundRequest = async (req, res) => {
             city,
             reason,
             condition,
+            first_name,
+            last_name,
+            family_name,
+            email,
+            refund_amount,
+            payment_method
         }, { transaction });
+
         await transaction.commit();
 
         await jobQueue.add('createRefundItems', {

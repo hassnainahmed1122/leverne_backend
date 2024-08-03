@@ -40,6 +40,30 @@ module.exports = (sequelize, DataTypes) => {
     condition: {
       type: DataTypes.STRING,
       allowNull: false
+    },
+    first_name: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    last_name: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    family_name: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    refund_amount: {
+      type: DataTypes.FLOAT,
+      allowNull: true
+    },
+    payment_method: {
+      type: DataTypes.STRING,
+      allowNull: true
     }
   }, {});
 
