@@ -169,7 +169,7 @@ exports.getOrderDetails = async (req, res) => {
 exports.createRefundRequest = async (req, res) => {
     const { error } = refundRequestSchema.validate(req.body);
     if (error) {
-        return res.status(400).json({ error: error.details[0].message });
+        return res.status(400).json({ message: error.details[0].message });
     }
 
     const { bank_code,iban, city, reason, condition, first_name, last_name, family_name, email, refund_amount, items, payment_method } = req.body;
