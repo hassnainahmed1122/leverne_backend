@@ -42,7 +42,7 @@ function transformRefundRequestsData(refundRequests, reportType) {
             'Payment Method': refundRequest.payment_method || '',
             'Amount to Transfer to Customer': refundRequest.refund_amount || 0,
             'IBAN': refundRequest.iban || '',
-            'Bank Code': '' // Placeholder
+            'Bank Code': refundRequest.bank_code || 'NA' // Placeholder
         };
 
         if (reportType !== 'finance') {

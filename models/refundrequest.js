@@ -87,6 +87,8 @@ module.exports = (sequelize, DataTypes) => {
     RefundRequest.belongsTo(models.Customer, { foreignKey: 'customer_id', as: 'customer' });
     RefundRequest.belongsTo(models.Order, { foreignKey: 'order_id', as: 'order' });
     RefundRequest.hasMany(models.RefundItem, { foreignKey: 'refund_request_id', as: 'refundItems' });
+    RefundRequest.hasMany(models.TamaraRequest, { foreignKey: 'refund_request_id', as: 'tamaraRequests' });
+
   };
 
   return RefundRequest;

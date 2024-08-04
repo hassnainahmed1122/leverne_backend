@@ -1,7 +1,7 @@
 const express = require('express');
 const { Sequelize } = require('sequelize');
 const cors = require('cors');
-const models = require('./models');
+const models = require('./models'); // Ensure models are imported
 const customerRoutes = require('./routes/customerRoutes');
 require('dotenv').config();
 require('./scheduler/reports_scheduler');
@@ -28,10 +28,38 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-
 // Use the customer routes
 app.use('/api/v1/customer', customerRoutes);
 
+app.post('/process-tamara-request', async (req, res) => {
+  const { refund_record_id } = req.body;
+
+  if (!refund_record_id) {
+    return res.status(400).json({ error: 'refund_record_id is required' });
+  }
+
+  try {
+    // Check if the RefundRequest record exists
+    const refundRequest = await models.RefundRequest.findByPk(refund_record_id, {
+      include: [{
+        model: models.Order, // Include associated Order model
+        as: 'order'         // Ensure this alias matches the one defined in the model
+      }]
+    });
+
+    if (!refundRequest) {
+      return res.status(404).json({ error: 'Refund record not found' });
+    }
+
+    // Add the job to the queue
+    await jobQueue.add('processTamaraRequest', { refund_record: refundRequest });
+
+    res.status(200).json({ message: 'Tamara request job added to the queue' });
+  } catch (error) {
+    console.error('Error processing Tamara request:', error.message);
+    res.status(500).json({ error: 'Failed to add job to the queue' });
+  }
+});
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
