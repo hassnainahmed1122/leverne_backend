@@ -13,6 +13,10 @@ module.exports = (sequelize, DataTypes) => {
     discount_amount: DataTypes.FLOAT,
     salla_reference_id: DataTypes.STRING,
     customer_id: DataTypes.INTEGER,
+    tax_percentage: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0,
+    },
   }, {});
 
   Order.associate = function(models) {

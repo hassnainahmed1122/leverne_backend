@@ -1,3 +1,5 @@
+const { RefundRequest } = require('../models')
+
 const generateOtp = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
 };
@@ -44,9 +46,23 @@ const generateEmailTemplate = (city, returnRequestId, aramexPolicyNumber) => {
     }
 }
 
+const generateUnique8DigitNumber = async () => {
+    let unique = false;
+    let uniqueNumber = '';
+    while (!unique) {
+        uniqueNumber = Math.floor(10000000 + Math.random() * 90000000).toString(); // Generate an 8-digit number
+        const existingRecord = await RefundRequest.findOne({ where: { uuid: uniqueNumber } });
+        if (!existingRecord) {
+            unique = true;
+        }
+    }
+    return uniqueNumber;
+};
+
 
 module.exports = {
     generateOtp,
     formatPhoneNumber,
-    generateEmailTemplate
+    generateEmailTemplate,
+    generateUnique8DigitNumber
 }

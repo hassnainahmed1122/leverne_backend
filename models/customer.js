@@ -23,6 +23,10 @@ module.exports = (sequelize, DataTypes) => {
     mobile_number: {
       type: DataTypes.STRING,
       allowNull: false
+    },
+    city: {
+      type: DataTypes.STRING,
+      allowNull: true // Set to true if the city is optional, false otherwise
     }
   }, {});
 

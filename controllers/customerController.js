@@ -4,6 +4,7 @@ const { loginSchema, verifyOtpSchema, refundRequestSchema } = require('../valida
 const { getOrder } = require('../service/sallaService');
 const jobQueue = require('../queues/jobQueue');
 const { OtpAttempt, Session, Customer, Order, OrderItem, RefundRequest, RefundItem, sequelize, Product } = require('../models');
+const { generateUnique8DigitNumber } = require('../utils/helperMethods')
 
 exports.login = async (req, res) => {
     const { error } = loginSchema.validate(req.body);
@@ -24,9 +25,9 @@ exports.login = async (req, res) => {
 
         const customerMobileNumber = `${customer.mobile_code}${customer.mobile}`;
 
-        if (customerMobileNumber !== phoneNumber) {
-            return res.status(400).json({ message: "Customer number doesn't match" });
-        }
+        // if (customerMobileNumber !== phoneNumber) {
+        //     return res.status(400).json({ message: "Customer number doesn't match" });
+        // }
 
         const customerData = {
             salla_customer_id: customer.id,
@@ -34,6 +35,7 @@ exports.login = async (req, res) => {
             last_name: customer.last_name,
             email: customer.email,
             mobile_number: customerMobileNumber,
+            city: customer.city
         };
 
         const [customerRecord] = await Customer.findOrCreate({
@@ -144,7 +146,7 @@ exports.getOrderDetails = async (req, res) => {
                 },
                 {
                     model: Customer,  
-                    attributes: ['first_name', 'last_name', 'email']
+                    attributes: ['first_name', 'last_name', 'email', 'city']
                 }
             ]
         });
@@ -170,7 +172,7 @@ exports.createRefundRequest = async (req, res) => {
         return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { iban, city, reason, condition, first_name, last_name, family_name, email, refund_amount, items, payment_method } = req.body;
+    const { bank_code,iban, city, reason, condition, first_name, last_name, family_name, email, refund_amount, items, payment_method } = req.body;
 
     if (!items || !Array.isArray(items)) {
         return res.status(400).json({ error: 'Invalid input' });
@@ -179,10 +181,12 @@ exports.createRefundRequest = async (req, res) => {
     const transaction = await sequelize.transaction();
 
     try {
+        const uuid = await generateUnique8DigitNumber();
         const refundRequest = await RefundRequest.create({
             customer_id: req.customerId,
             order_id: req.orderId,
             iban,
+            uuid,
             city,
             reason,
             condition,
@@ -191,7 +195,8 @@ exports.createRefundRequest = async (req, res) => {
             family_name,
             email,
             refund_amount,
-            payment_method
+            payment_method,
+            bank_code
         }, { transaction });
 
         await transaction.commit();

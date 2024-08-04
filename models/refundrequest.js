@@ -16,10 +16,13 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     uuid: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.STRING(8), // Changed to STRING with length 8
       allowNull: false,
-      unique: true
+      unique: true,
+      validate: {
+        len: [8, 8], // Ensures the uuid is exactly 8 characters long
+        isNumeric: true // Ensures uuid contains only digits
+      }
     },
     order_id: {
       type: DataTypes.INTEGER,
@@ -73,6 +76,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
       defaultValue: 'pending'
+    },
+    bank_code: {
+      type: DataTypes.STRING,
+      allowNull: true
     }
   }, {});
 

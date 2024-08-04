@@ -27,6 +27,7 @@ async function job1Processor(job) {
             discount_amount: totalDiscount,
             salla_reference_id: orderDetails.reference_id,
             customer_id: job.data.customerId, 
+            tax_percentage: orderDetails.amounts.tax.percent
         };
 
         const [order, orderCreated] = await Order.findOrCreate({

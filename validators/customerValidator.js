@@ -57,6 +57,7 @@ const ibanValidationSchema = Joi.string()
 
     const refundRequestSchema = Joi.object({
         iban: ibanValidationSchema,
+        bank_code: Joi.string(),
         payment_method: Joi.string().required("payment method is required"),
         city: Joi.string().required().messages({
             'string.empty': 'City is required',
