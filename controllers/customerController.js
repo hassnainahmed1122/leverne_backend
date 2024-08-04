@@ -25,9 +25,9 @@ exports.login = async (req, res) => {
 
         const customerMobileNumber = `${customer.mobile_code}${customer.mobile}`;
 
-        // if (customerMobileNumber !== phoneNumber) {
-        //     return res.status(400).json({ message: "Customer number doesn't match" });
-        // }
+        if (customerMobileNumber !== phoneNumber) {
+            return res.status(400).json({ message: "Customer number doesn't match" });
+        }
 
         const customerData = {
             salla_customer_id: customer.id,
