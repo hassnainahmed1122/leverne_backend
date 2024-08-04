@@ -23,7 +23,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     order_id: {
       type: DataTypes.INTEGER,
-      allowNull: false
+      allowNull: false,
+      references: {
+        model: 'Orders',
+        key: 'id'
+      }
     },
     iban: {
       type: DataTypes.STRING,
@@ -64,12 +68,18 @@ module.exports = (sequelize, DataTypes) => {
     payment_method: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    return_status: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'pending'
     }
   }, {});
 
   RefundRequest.associate = function(models) {
-    RefundRequest.belongsTo(models.Customer, { foreignKey: 'customer_id' });
-    RefundRequest.hasMany(models.RefundItem, { foreignKey: 'refund_request_id' });
+    RefundRequest.belongsTo(models.Customer, { foreignKey: 'customer_id', as: 'customer' });
+    RefundRequest.belongsTo(models.Order, { foreignKey: 'order_id', as: 'order' });
+    RefundRequest.hasMany(models.RefundItem, { foreignKey: 'refund_request_id', as: 'refundItems' });
   };
 
   return RefundRequest;

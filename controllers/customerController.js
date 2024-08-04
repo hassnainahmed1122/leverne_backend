@@ -202,6 +202,13 @@ exports.createRefundRequest = async (req, res) => {
             orderId: req.orderId
         });
 
+        await jobQueue.add('sendEmail', {
+            to: 'hassnainahmed111222@gmail.com',
+            city: refundRequest.city,
+            returnRequestId: refundRequest.uuid,
+            aramexPolicyNumber: '123456789'
+        });
+
         res.status(201).json(refundRequest);
     } catch (err) {
         await transaction.rollback();

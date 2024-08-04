@@ -25,8 +25,8 @@ module.exports = (sequelize, DataTypes) => {
   }, {});
 
   RefundItem.associate = function(models) {
-    RefundItem.belongsTo(models.RefundRequest, { foreignKey: 'refund_request_id' });
-    RefundItem.belongsTo(models.Product, { foreignKey: 'product_id' });
+    RefundItem.belongsTo(models.RefundRequest, { foreignKey: 'refund_request_id', as: 'refundRequest' });
+    RefundItem.belongsTo(models.Product, { foreignKey: 'product_id', as: 'product' });
   };
 
   return RefundItem;
