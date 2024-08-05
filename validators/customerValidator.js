@@ -75,9 +75,6 @@ const ibanValidationSchema = Joi.string()
         last_name: Joi.string().required().messages({
             'string.empty': 'Last name is required'
         }),
-        family_name: Joi.string().required().messages({
-            'string.empty': 'Family name is required'
-        }),
         email: Joi.string().email().required().messages({
             'string.email': 'Invalid email format',
             'string.empty': 'Email is required'

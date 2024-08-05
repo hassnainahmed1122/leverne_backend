@@ -2,15 +2,7 @@
 
 module.exports = (sequelize, DataTypes) => {
     const TamaraRequest = sequelize.define('TamaraRequest', {
-        return_request_id: {
-            type: DataTypes.STRING,
-            allowNull: false
-        },
         status: {
-            type: DataTypes.STRING,
-            allowNull: false
-        },
-        payment_method: {
             type: DataTypes.STRING,
             allowNull: false
         },
@@ -21,6 +13,10 @@ module.exports = (sequelize, DataTypes) => {
                 model: 'RefundRequests',
                 key: 'id'
             }
+        },
+        failure_reason: {
+            type: DataTypes.STRING,
+            allowNull: true
         }
     }, {
         tableName: 'tamara_requests',
@@ -28,7 +24,6 @@ module.exports = (sequelize, DataTypes) => {
     });
 
     TamaraRequest.associate = function (models) {
-        // Define the association with RefundRequest
         TamaraRequest.belongsTo(models.RefundRequest, {
             foreignKey: 'refund_request_id',
             as: 'refundRequest'

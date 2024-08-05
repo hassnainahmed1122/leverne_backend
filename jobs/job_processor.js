@@ -26,55 +26,101 @@ async function job1Processor(job) {
             tax_amount: orderDetails.amounts.tax.amount.amount,
             discount_amount: totalDiscount,
             salla_reference_id: orderDetails.reference_id,
-            customer_id: job.data.customerId, 
+            customer_id: job.data.customerId,
             tax_percentage: orderDetails.amounts.tax.percent
         };
 
-        const [order, orderCreated] = await Order.findOrCreate({
+        let order = await Order.findOne({
             where: { salla_order_id: orderData.salla_order_id },
-            defaults: orderData,
             transaction
         });
 
-        const products = orderDetails.items.map(item => {
-        return { salla_product_id: item.product.id,
-            price: item.amounts.price_without_tax.amount,
-            thumbnail: item.product.thumbnail,
-            SKU: item.sku,
-            tax: (item.amounts.tax.amount.amount / item.quantity).toFixed(2),
-            discount: (item.amounts.total_discount.amount / item.quantity).toFixed(2),
-            gtin: item.product.gtin,
-            name: item.name,
-            tax_percentage: item.amounts.tax.percent || 0,
-        }});
+        if (order) {
+            await order.update(orderData, { transaction });
+        } else {
+            order = await Order.create(orderData, { transaction });
+        }
 
-        const insertedProducts = await Promise.all(products.map(async productData => {
-            return Product.findOrCreate({
-                where: { salla_product_id: productData.salla_product_id },
-                defaults: productData,
-                transaction
-            }).then(([product, created]) => product);
-        }));
+        const productMap = new Map();
 
-        const orderItems = orderDetails.items.map((item, index) => ({
-            order_id: order.id,
-            product_id: insertedProducts[index].id,
-            quantity: item.quantity
-        }));
+        for (const item of orderDetails.items) {
+            const productData = {
+                salla_product_id: item.product.id,
+                price: item.amounts.price_without_tax.amount,
+                thumbnail: item.product.thumbnail,
+                SKU: item.sku,
+                tax: (item.amounts.tax.amount.amount / item.quantity).toFixed(2),
+                discount: (item.amounts.total_discount.amount / item.quantity).toFixed(2),
+                gtin: item.product.gtin,
+                name: item.name,
+                tax_percentage: item.amounts.tax.percent || 0,
+            };
 
-        await Promise.all(orderItems.map(async orderItemData => {
-            await OrderItem.findOrCreate({
-                where: {
-                    order_id: orderItemData.order_id,
-                    product_id: orderItemData.product_id,
-                },
-                defaults: orderItemData,
-                transaction
-            });
-        }));
+            try {
+                let product = await Product.findOne({
+                    where: { salla_product_id: productData.salla_product_id },
+                    transaction
+                });
+
+                if (product) {
+                    await product.update(productData, { transaction });
+                } else {
+                    product = await Product.create(productData, { transaction });
+                }
+
+                productMap.set(productData.salla_product_id, product.id);
+            } catch (error) {
+                console.error('Error handling product:', error);
+                throw error;
+            }
+        }
+
+        const orderItems = new Map(); // Use Map to ensure unique order items by product_id
+
+        // Handle each item in the orderDetails
+        for (const item of orderDetails.items) {
+            const productId = productMap.get(item.product.id);
+            if (productId) {
+                if (orderItems.has(productId)) {
+                    // If product_id already exists, increment the quantity
+                    let existingOrderItem = orderItems.get(productId);
+                    existingOrderItem.quantity += item.quantity;
+                } else {
+                    // Otherwise, create a new order item entry
+                    orderItems.set(productId, {
+                        order_id: order.id,
+                        product_id: productId,
+                        quantity: item.quantity
+                    });
+                }
+            } else {
+                console.error('Product ID not found for item:', item);
+            }
+        }
+
+        // Now insert/update order items in the database
+        for (const orderItemData of orderItems.values()) {
+            try {
+                const existingOrderItem = await OrderItem.findOne({
+                    where: {
+                        order_id: orderItemData.order_id,
+                        product_id: orderItemData.product_id
+                    },
+                    transaction
+                });
+
+                if (existingOrderItem) {
+                    await existingOrderItem.update(orderItemData, { transaction });
+                } else {
+                    await OrderItem.create(orderItemData, { transaction });
+                }
+            } catch (error) {
+                console.error('Error handling order item:', error);
+                throw error;
+            }
+        }
 
         await transaction.commit();
-
         await handleOtpGeneration(job.data.customerId, job.data.mobileNumber);
 
     } catch (err) {

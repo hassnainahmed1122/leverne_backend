@@ -172,7 +172,7 @@ exports.createRefundRequest = async (req, res) => {
         return res.status(400).json({ message: error.details[0].message });
     }
 
-    const { bank_code,iban, city, reason, condition, first_name, last_name, family_name, email, refund_amount, items, payment_method } = req.body;
+    const { bank_code,iban, city, reason, condition, first_name, last_name, email, refund_amount, items, payment_method } = req.body;
 
     if (!items || !Array.isArray(items)) {
         return res.status(400).json({ error: 'Invalid input' });
@@ -192,7 +192,6 @@ exports.createRefundRequest = async (req, res) => {
             condition,
             first_name,
             last_name,
-            family_name,
             email,
             refund_amount,
             payment_method,
