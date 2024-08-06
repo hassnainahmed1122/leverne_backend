@@ -66,9 +66,6 @@ const ibanValidationSchema = Joi.string()
         reason: Joi.string().required().messages({
             'string.empty': 'Reason is required'
         }),
-        condition: Joi.string().required().messages({
-            'string.empty': 'Product status is required'
-        }),
         first_name: Joi.string().required().messages({
             'string.empty': 'First name is required'
         }),

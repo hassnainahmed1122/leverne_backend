@@ -8,43 +8,47 @@ const formatPhoneNumber = (phoneNumber) => {
     return phoneNumber.startsWith('+') ? phoneNumber.substring(1) : phoneNumber;
 };
 
-const generateEmailTemplate = (city, returnRequestId, aramexPolicyNumber) => {
-    if (city.toLowerCase() === 'riyadh') {
-        return {
-            subject: 'طلب استرجاع من عطور ثنيان',
-            text: `عميلنا العزيز،
+const generateEmailTemplate = (city, returnRequestId, aramexPolicyNumber, attachmentUrl) => {
+    const commonText = `
+عميلنا العزيز،
 تم تسجيل طلب الارجاع برقم: ${returnRequestId}
 رقم بوليصة الشحن: ${aramexPolicyNumber}
+    `;
 
+    const riyadhSpecificText = `
 سوف يتم التواصل معكم من قبل شركة الشحن ارامكس لاستلام المنتجات وسيتم المراجعة واعادة المبلغ في مدة لاتتجاوز ٥-٧ ايام عمل من تاريخ استلام المنتجات.
-
 نتشرّف بخدمتكم دائماً.
-عطور ثنيان،`,
-            html: `<p>عميلنا العزيز،</p>
-<p>تم تسجيل طلب الارجاع برقم: ${returnRequestId}</p>
-<p>رقم بوليصة الشحن: ${aramexPolicyNumber}</p>
-<p>سوف يتم التواصل معكم من قبل شركة الشحن ارامكس لاستلام المنتجات وسيتم المراجعة واعادة المبلغ في مدة لاتتجاوز ٥-٧ ايام عمل من تاريخ استلام المنتجات.</p>
-<p>نتشرّف بخدمتكم دائماً.<br/>عطور ثنيان،</p>`
-        };
-    } else {
-        return {
-            subject: 'طلب استرجاع من عطور ثنيان',
-            text: `عميلنا العزيز،
-تم تسجيل طلب الارجاع برقم: ${returnRequestId}
-رقم بوليصة الشحن: ${aramexPolicyNumber}
+عطور ثنيان،`;
 
+    const otherCitySpecificText = `
 الرجاء تسليم المنتجات لأقرب فرع ارامكس وسيتم المراجعة واعادة المبلغ في مدة لاتتجاوز ٥-٧ ايام عمل من تاريخ استلام المنتجات.
-
 نتشرّف بخدمتكم دائماً.
-عطور ثنيان،`,
-            html: `<p>عميلنا العزيز،</p>
+عطور ثنيان،`;
+
+    const text = commonText + (city.toLowerCase() === 'riyadh' ? riyadhSpecificText : otherCitySpecificText);
+
+    const html = `
+<p>عميلنا العزيز،</p>
 <p>تم تسجيل طلب الارجاع برقم: ${returnRequestId}</p>
 <p>رقم بوليصة الشحن: ${aramexPolicyNumber}</p>
-<p>الرجاء تسليم المنتجات لأقرب فرع ارامكس وسيتم المراجعة واعادة المبلغ في مدة لاتتجاوز ٥-٧ ايام عمل من تاريخ استلام المنتجات.</p>
-<p>نتشرّف بخدمتكم دائماً.<br/>عطور ثنيان،</p>`
-        };
-    }
+${city.toLowerCase() === 'riyadh' ? 
+    `<p>سوف يتم التواصل معكم من قبل شركة الشحن ارامكس لاستلام المنتجات وسيتم المراجعة واعادة المبلغ في مدة لاتتجاوز ٥-٧ ايام عمل من تاريخ استلام المنتجات.</p>` :
+    `<p>الرجاء تسليم المنتجات لأقرب فرع ارامكس وسيتم المراجعة واعادة المبلغ في مدة لاتتجاوز ٥-٧ ايام عمل من تاريخ استلام المنتجات.</p>`
 }
+<p>نتشرّف بخدمتكم دائماً.<br/>عطور ثنيان،</p>`;
+
+    return {
+        subject: 'طلب استرجاع من عطور ثنيان',
+        text: text,
+        html: html,
+        attachments: [
+            {
+                filename: 'Aramex_Shipment_Label.pdf',
+                path: attachmentUrl
+            }
+        ]
+    };
+};
 
 const generateUnique8DigitNumber = async () => {
     let unique = false;

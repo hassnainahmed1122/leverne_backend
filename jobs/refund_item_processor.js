@@ -1,4 +1,5 @@
-const { RefundItem, OrderItem, sequelize } = require('../models');
+const { RefundItem, sequelize } = require('../models');
+const { createShipmentProcessor } = require('../jobs/aramex_processors.js');
 
 const refundItemProcessor = async (job) => {
     const { refundRequestId, items } = job.data;
@@ -15,9 +16,18 @@ const refundItemProcessor = async (job) => {
         await RefundItem.bulkCreate(refundItems, { transaction });
 
         await transaction.commit();
+        
 
+        let job = {
+            data: {
+                refund_order_id: refundRequestId 
+            }
+        }
+
+        await createShipmentProcessor(job)
+        
     } catch (err) {
-        console.error('Error creating refund items or updating OrderItem quantities:', err);
+        console.error('Error creating refund items or adding job to queue:', err);
         throw err; 
     }
 };

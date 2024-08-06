@@ -28,27 +28,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Use the customer routes
 app.use('/api/v1/customer', customerRoutes);
-
-
-app.post('/create-shipment', async (req, res) => {
-  try {
-      const { refund_order_id } = req.body;
-
-      if (!refund_order_id) {
-          return res.status(400).json({ error: 'refund_order_id is required' });
-      }
-
-      // Add job to the queue
-      await jobQueue.add('createShipment', { refund_order_id });
-
-      res.status(200).json({ message: 'Shipment creation job added to queue' });
-  } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: error.message });
-  }
-});
 
 app.post('/track-shipments', async (req, res) => {
   const { trackingNumbers } = req.body;

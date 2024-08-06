@@ -1,64 +1,54 @@
 const axios = require('axios');
 const { RefundRequest, RefundItem, Product, sequelize, Customer } = require('../models')
+const { emailProcessor } = require('../jobs/email_processor.js');
+
 function getNextWorkingDay(date) {
     let day = date.getDay();
-    if (day === 5) { // If it's Friday
-        date.setDate(date.getDate() + 2); // Move to Sunday
-    } else if (day === 6) { // If it's Saturday
-        date.setDate(date.getDate() + 1); // Move to Sunday
+    if (day === 5) {
+        date.setDate(date.getDate() + 2);
+    } else if (day === 6) {
+        date.setDate(date.getDate() + 1);
     } else {
-        date.setDate(date.getDate() + 1); // Move to the next day
+        date.setDate(date.getDate() + 1);
     }
     return date;
 }
 
 function adjustDates() {
     let now = new Date();
-    console.log("Current date and time:", now.toISOString());
 
-    // Start with the next working day
     let pickupDate = getNextWorkingDay(new Date());
-    
-    // Ensure pickup date is not in the past
+
     if (pickupDate <= now) {
         pickupDate = getNextWorkingDay(now);
     }
-
-    console.log("Initial pickup date:", pickupDate.toISOString());
-
-    // Set the pickupDate to 13:30 local time
     pickupDate.setHours(13, 30, 0, 0);
-    pickupDate.setMinutes(pickupDate.getMinutes() - pickupDate.getTimezoneOffset()); // Adjust to local time
-    console.log("Adjusted pickup date:", pickupDate.toISOString());
+    pickupDate.setMinutes(pickupDate.getMinutes() - pickupDate.getTimezoneOffset());
 
     let readyTime = new Date(pickupDate);
     let lastPickupTime = new Date(pickupDate);
     let closingTime = new Date(pickupDate);
 
     readyTime.setHours(13, 30, 0, 0);
-    readyTime.setMinutes(readyTime.getMinutes() - readyTime.getTimezoneOffset()); // Adjust to local time
+    readyTime.setMinutes(readyTime.getMinutes() - readyTime.getTimezoneOffset());
     lastPickupTime.setHours(13, 30, 0, 0);
-    lastPickupTime.setMinutes(lastPickupTime.getMinutes() - lastPickupTime.getTimezoneOffset()); // Adjust to local time
+    lastPickupTime.setMinutes(lastPickupTime.getMinutes() - lastPickupTime.getTimezoneOffset());
     closingTime.setHours(13, 30, 0, 0);
-    closingTime.setMinutes(closingTime.getMinutes() - closingTime.getTimezoneOffset()); // Adjust to local time
+    closingTime.setMinutes(closingTime.getMinutes() - closingTime.getTimezoneOffset());
 
-    // Set the closing time to 20 days from now
     closingTime.setDate(closingTime.getDate() + 20);
-    console.log("Closing time:", closingTime.toISOString());
 
-    // Set ShippingDateTime and DueDate
     let shippingDateTime = new Date(pickupDate);
     let dueDate = new Date(pickupDate);
-    
+
     shippingDateTime.setHours(13, 30, 0, 0);
-    shippingDateTime.setMinutes(shippingDateTime.getMinutes() - shippingDateTime.getTimezoneOffset()); // Adjust to local time
+    shippingDateTime.setMinutes(shippingDateTime.getMinutes() - shippingDateTime.getTimezoneOffset());
     dueDate.setHours(13, 30, 0, 0);
-    dueDate.setMinutes(dueDate.getMinutes() - dueDate.getTimezoneOffset()); // Adjust to local time
+    dueDate.setMinutes(dueDate.getMinutes() - dueDate.getTimezoneOffset());
     dueDate.setDate(dueDate.getDate() + 20);
 
-    // Convert dates to milliseconds since Unix epoch
     const getMillisecondsSinceEpoch = (date) => date.getTime();
-    
+
     return {
         PickupDate: getMillisecondsSinceEpoch(pickupDate),
         ReadyTime: getMillisecondsSinceEpoch(readyTime),
@@ -70,331 +60,329 @@ function adjustDates() {
 }
 
 const citiesWithProductType = {
-        "AbaAlworood": "RTC",
-        "Abha": "RTC",
-        "AbhaManhal": "RTC",
-        "Abqaiq": "RTD",
-        "AbuAjram": "RTC",
-        "AbuAreish": "RTC",
-        "AdDahinah": "RTD",
-        "AdDubaiyah": "RTC",
-        "Addayer": "RTC",
-        "Adham": "RTD",
-        "Afif": "RTD",
-        "Aflaj": "RTD",
-        "AhadMasarha": "RTD",
-        "AhadRufaidah": "RTD",
-        "AinDar": "RTD",
-        "AlAdari": "RTC",
-        "AlAis": "RTC",
-        "AlAjfar": "RTD",
-        "AlAmmarah": "RTC",
-        "AlArdah": "RTC",
-        "AlArja": "RTD",
-        "AlAsyah": "RTC",
-        "AlBada": "RTD",
-        "AlBashayer": "RTC",
-        "AlBatra": "RTD",
-        "AlBijadyah": "RTC",
-        "AlDalemya": "RTD",
-        "AlFuwaileq": "RTD",
-        "AlHait": "RTC",
-        "AlHaith": "RTD",
-        "AlHassa": "RTC",
-        "AlHayathem": "RTC",
-        "AlHufayyirah": "RTC",
-        "AlHulayfahAsSufla": "RTC",
-        "AlIdabi": "RTD",
-        "AlJishah": "RTC",
-        "AlJumum": "RTC",
-        "AlKhishaybi": "RTC",
-        "AlKhitah": "RTC",
-        "AlLaqayit": "RTC",
-        "AlMada": "RTC",
-        "AlMadaya": "RTC",
-        "AlMadinahAlMunawwarah": "RTD",
-        "AlMahani": "RTC",
-        "AlMahd": "RTD",
-        "AlMidrij": "RTD",
-        "AlMoya": "RTD",
-        "AlQarin": "RTD",
-        "AlUwayqilah": "RTD",
-        "AlWasayta": "RTD",
-        "AlJsh": "RTC",
-        "Alghat": "RTD",
-        "Alhada": "RTC",
-        "Alnabhanya": "RTC",
-        "Alrass": "RTD",
-        "Amaq": "RTC",
-        "AnNabkAbuQasr": "RTC",
-        "AnNafiah": "RTC",
-        "AnNuqrah": "RTC",
-        "Anak": "RTC",
-        "Aqiq": "RTD",
-        "Aqool": "RTC",
-        "ArRadifah": "RTC",
-        "ArRafiah": "RTC",
-        "ArRishawiyah": "RTC",
-        "Arar": "RTD",
-        "Artawiah": "RTC",
-        "AsSulaimaniyah": "RTC",
-        "AsSulubiayh": "RTC",
-        "Asfan": "RTD",
-        "AshShaara": "RTC",
-        "AshShamli": "RTD",
-        "AshShananah": "RTD",
-        "AshShimasiyah": "RTD",
-        "AshShuqaiq": "RTD",
-        "Asheirah": "RTD",
-        "AtTuwayr": "RTD",
-        "Atawleh": "RTC",
-        "AthThybiyah": "RTD",
-        "Awamiah": "RTC",
-        "AynFuhayd": "RTD",
-        "Badaya": "RTC",
-        "Bader": "RTC",
-        "BadrAlJanoub": "RTD",
-        "Baha": "RTC",
-        "Bahara": "RTD",
-        "BahrAbuSukaynah": "RTC",
-        "BahratAlMoujoud": "RTC",
-        "Balahmar": "RTC",
-        "Balasmar": "RTC",
-        "Balqarn": "RTD",
-        "BaqaAshSharqiyah": "RTD",
-        "Baqaa": "RTD",
-        "Baqiq": "RTC",
-        "Bareq": "RTD",
-        "Batha": "RTC",
-        "Biljurashi": "RTC",
-        "Birk": "RTC",
-        "Bish": "RTD",
-        "Bisha": "RTD",
-        "Bukeiriah": "RTC",
-        "Buraidah": "RTD",
-        "Daelim": "RTC",
-        "Damad": "RTD",
-        "Dammam": "RTD",
-        "Darb": "RTD",
-        "Daryah": "RTC",
-        "Dawadmi": "RTC",
-        "Deraab": "RTD",
-        "DereIyeh": "RTC",
-        "Dhabyah": "RTC",
-        "Dhahban": "RTD",
-        "Dhahran": "RTD",
-        "DhahranAlJanoob": "RTC",
-        "Dhurma": "RTC",
-        "Diriyah": "RTD",
-        "DomatAlJandal": "RTC",
-        "Duba": "RTC",
-        "Duhknah": "RTD",
-        "DulayRashid": "RTC",
-        "Farasan": "RTD",
-        "Ghazalah": "RTC",
-        "Ghtai": "RTC",
-        "Gilwa": "RTC",
-        "Gizan": "RTC",
-        "Hadeethah": "RTC",
-        "HaferAlBatin": "RTC",
-        "Hail": "RTC",
-        "Hajrah": "RTC",
-        "HalatAmmar": "RTC",
-        "Hali": "RTC",
-        "Haqil": "RTD",
-        "Harad": "RTC",
-        "Harajah": "RTC",
-        "Hareeq": "RTC",
-        "HaweaTaif": "RTC",
-        "Haweyah": "RTC",
-        "HawtatBaniTamim": "RTC",
-        "HazmAlJalamid": "RTD",
-        "Hedeb": "RTD",
-        "Hinakeya": "RTD",
-        "Hofuf": "RTC",
-        "Horaimal": "RTC",
-        "HotatSudair": "RTC",
-        "Hubuna": "RTD",
-        "Huraymala": "RTC",
-        "Huroob": "RTD",
-        "Jaaraneh": "RTC & RTI",
-        "JaAraneh": "RTD",
-        "Jafar": "RTC",
-        "Jalajel": "RTD",
-        "Jeddah": "RTD",
-        "Jouf": "RTD",
-        "Jubail": "RTD",
-        "Kahlah": "RTD",
-        "Kara": "RTC",
-        "KaraA": "RTC",
-        "Karboos": "RTC",
-        "Khafji": "RTC",
-        "Khaibar": "RTD",
-        "Khairan": "RTC",
-        "Khamaseen": "RTD",
-        "KhamisMushait": "RTD",
-        "Kharj": "RTD",
-        "Khasawyah": "RTC",
-        "Khobar": "RTD",
-        "Khodaria": "RTC",
-        "Khulais": "RTC",
-        "KingAbdullahEconomicCity": "RTD",
-        "Kuhaybar": "RTD",
-        "Layla": "RTD",
-        "Lihyan": "RTC",
-        "Lith": "RTC",
-        "Majarda": "RTD",
-        "MakkahAlMukarramah": "RTC",
-        "Mandag": "RTD",
-        "MashaAlHadeed": "RTC",
-        "Mashar": "RTD",
-        "Mecca": "RTC",
-        "Midinhab": "RTC",
-        "Mizab": "RTC",
-        "Mubadala": "RTD",
-        "Mulayjah": "RTC",
-        "Muna": "RTC",
-        "Munifah": "RTD",
-        "Murayr": "RTD",
-        "Muzahmiah": "RTC",
-        "Najran": "RTC",
-        "Namas": "RTD",
-        "Nebyah": "RTD",
-        "Nimran": "RTD",
-        "Nisab": "RTC",
-        "Nmaas": "RTD",
-        "Noa": "RTC",
-        "Numira": "RTD",
-        "Nuqubah": "RTC",
-        "Omul Hala": "RTC",
-        "OmulRaka": "RTC",
-        "Onayzah": "RTD",
-        "Oula": "RTC",
-        "Oula": "RTC",
-        "Ouwaydah": "RTD",
-        "Ozaizah": "RTD",
-        "Qadeemah": "RTD",
-        "QariyaAlOlya": "RTD",
-        "QasrAlHokm": "RTD",
-        "Qassab": "RTC",
-        "Qatif": "RTD",
-        "Qayra": "RTD",
-        "Qeiba": "RTC",
-        "Qeiteen": "RTC",
-        "Qissia": "RTD",
-        "Qunfudhah": "RTC",
-        "Qurayyat": "RTC",
-        "QurayyatAlMulayhan": "RTC",
-        "Rabigh": "RTD",
-        "Rahima": "RTD",
-        "Rahmaniya": "RTC",
-        "Ramah": "RTC",
-        "Rana": "RTC",
-        "Ranyah": "RTC",
-        "Rass": "RTC",
-        "RasTanura": "RTD",
-        "Rashraaf": "RTC",
-        "Riyadh": "RTC",
-        "RiyadhAlKhabra": "RTC",
-        "RiyadhAlkhubra": "RTC",
-        "RiyadhAlMusalla": "RTC",
-        "RiyadhAlNaseem": "RTC",
-        "RiyadhArRimal": "RTC",
-        "RiyadhAsSalam": "RTC",
-        "RiyadhUthman": "RTC",
-        "RiyadhYasmeen": "RTC",
-        "RiyadhZone": "RTC",
-        "Ruadah": "RTC",
-        "Rumaniyah": "RTD",
-        "Ruthwah": "RTC",
-        "Sabha": "RTC",
-        "Safaniyah": "RTD",
-        "Sahmiya": "RTC",
-        "Saida": "RTC",
-        "SaihAlHimma": "RTC",
-        "Saihat": "RTD",
-        "Sakaka": "RTC",
-        "Saleel": "RTD",
-        "Salwa": "RTC",
-        "Samoodah": "RTC",
-        "Samtah": "RTC",
-        "Samtah": "RTD",
-        "Sanamah": "RTD",
-        "Sayqiyah": "RTC",
-        "Shabrakah": "RTC",
-        "Shadqam": "RTD",
-        "Shamasiah": "RTD",
-        "Shaqra": "RTC",
-        "Shari": "RTC",
-        "Sharorah": "RTC",
-        "Shiyab": "RTC",
-        "Shuqaiq": "RTC",
-        "Shwaikh": "RTC",
-        "Sihma": "RTC",
-        "Sikkah": "RTC",
-        "Sokkaynah": "RTC",
-        "Sulaimania": "RTC",
-        "Sulayel": "RTC",
-        "Sur": "RTC",
-        "Tabarjal": "RTC",
-        "Tabuk": "RTC",
-        "Tafi": "RTD",
-        "Tagyah": "RTC",
-        "Tahlia": "RTC",
-        "Taif": "RTC",
-        "Tamir": "RTC",
-        "Tanumah": "RTC",
-        "Tarout": "RTD",
-        "Tarut": "RTD",
-        "Tathleeth": "RTC",
-        "Taybah": "RTC",
-        "Thadiq": "RTC",
-        "Tharmada": "RTC",
-        "Thurayban": "RTC",
-        "Tihama": "RTC",
-        "Towd": "RTC",
-        "Tumair": "RTC",
-        "Turabah": "RTC",
-        "Turaif": "RTC",
-        "UglatAsugur": "RTD",
-        "UglatHissin": "RTC",
-        "Uhaimir": "RTC",
-        "Unaizah": "RTC",
-        "Unayzah": "RTC",
-        "UqlatAlSoqur": "RTC",
-        "Uqur": "RTC",
-        "Usaylah": "RTC",
-        "Usfan": "RTC",
-        "Ushaiqer": "RTC",
-        "Ushaiqar": "RTC",
-        "Uthailah": "RTC",
-        "Utayfi": "RTC",
-        "WadiAlDawasir": "RTC",
-        "WadiAlFaraa": "RTC",
-        "WadiAlJamal": "RTC",
-        "WadiAdDawasir": "RTC",
-        "WadiAlHamra": "RTC",
-        "WadiAlSalaa": "RTC",
-        "WadiAdDiwasir": "RTC",
-        "Waed": "RTC & RTD",
-        "Wajh": "RTC",
-        "Yadamah": "RTC",
-        "Yanbu": "RTC",
-        "YanbuAlBahr": "RTC",
-        "YanbuAlNakhil": "RTC",
-        "YanbuAlSibyan": "RTC",
-        "Yudma": "RTC",
-        "Zamzam": "RTC",
-        "Zareer": "RTC",
-        "Zulfi": "RTC"
-    
+    "AbaAlworood": "RTC",
+    "Abha": "RTC",
+    "AbhaManhal": "RTC",
+    "Abqaiq": "RTD",
+    "AbuAjram": "RTC",
+    "AbuAreish": "RTC",
+    "AdDahinah": "RTD",
+    "AdDubaiyah": "RTC",
+    "Addayer": "RTC",
+    "Adham": "RTD",
+    "Afif": "RTD",
+    "Aflaj": "RTD",
+    "AhadMasarha": "RTD",
+    "AhadRufaidah": "RTD",
+    "AinDar": "RTD",
+    "AlAdari": "RTC",
+    "AlAis": "RTC",
+    "AlAjfar": "RTD",
+    "AlAmmarah": "RTC",
+    "AlArdah": "RTC",
+    "AlArja": "RTD",
+    "AlAsyah": "RTC",
+    "AlBada": "RTD",
+    "AlBashayer": "RTC",
+    "AlBatra": "RTD",
+    "AlBijadyah": "RTC",
+    "AlDalemya": "RTD",
+    "AlFuwaileq": "RTD",
+    "AlHait": "RTC",
+    "AlHaith": "RTD",
+    "AlHassa": "RTC",
+    "AlHayathem": "RTC",
+    "AlHufayyirah": "RTC",
+    "AlHulayfahAsSufla": "RTC",
+    "AlIdabi": "RTD",
+    "AlJishah": "RTC",
+    "AlJumum": "RTC",
+    "AlKhishaybi": "RTC",
+    "AlKhitah": "RTC",
+    "AlLaqayit": "RTC",
+    "AlMada": "RTC",
+    "AlMadaya": "RTC",
+    "AlMadinahAlMunawwarah": "RTD",
+    "AlMahani": "RTC",
+    "AlMahd": "RTD",
+    "AlMidrij": "RTD",
+    "AlMoya": "RTD",
+    "AlQarin": "RTD",
+    "AlUwayqilah": "RTD",
+    "AlWasayta": "RTD",
+    "AlJsh": "RTC",
+    "Alghat": "RTD",
+    "Alhada": "RTC",
+    "Alnabhanya": "RTC",
+    "Alrass": "RTD",
+    "Amaq": "RTC",
+    "AnNabkAbuQasr": "RTC",
+    "AnNafiah": "RTC",
+    "AnNuqrah": "RTC",
+    "Anak": "RTC",
+    "Aqiq": "RTD",
+    "Aqool": "RTC",
+    "ArRadifah": "RTC",
+    "ArRafiah": "RTC",
+    "ArRishawiyah": "RTC",
+    "Arar": "RTD",
+    "Artawiah": "RTC",
+    "AsSulaimaniyah": "RTC",
+    "AsSulubiayh": "RTC",
+    "Asfan": "RTD",
+    "AshShaara": "RTC",
+    "AshShamli": "RTD",
+    "AshShananah": "RTD",
+    "AshShimasiyah": "RTD",
+    "AshShuqaiq": "RTD",
+    "Asheirah": "RTD",
+    "AtTuwayr": "RTD",
+    "Atawleh": "RTC",
+    "AthThybiyah": "RTD",
+    "Awamiah": "RTC",
+    "AynFuhayd": "RTD",
+    "Badaya": "RTC",
+    "Bader": "RTC",
+    "BadrAlJanoub": "RTD",
+    "Baha": "RTC",
+    "Bahara": "RTD",
+    "BahrAbuSukaynah": "RTC",
+    "BahratAlMoujoud": "RTC",
+    "Balahmar": "RTC",
+    "Balasmar": "RTC",
+    "Balqarn": "RTD",
+    "BaqaAshSharqiyah": "RTD",
+    "Baqaa": "RTD",
+    "Baqiq": "RTC",
+    "Bareq": "RTD",
+    "Batha": "RTC",
+    "Biljurashi": "RTC",
+    "Birk": "RTC",
+    "Bish": "RTD",
+    "Bisha": "RTD",
+    "Bukeiriah": "RTC",
+    "Buraidah": "RTD",
+    "Daelim": "RTC",
+    "Damad": "RTD",
+    "Dammam": "RTD",
+    "Darb": "RTD",
+    "Daryah": "RTC",
+    "Dawadmi": "RTC",
+    "Deraab": "RTD",
+    "DereIyeh": "RTC",
+    "Dhabyah": "RTC",
+    "Dhahban": "RTD",
+    "Dhahran": "RTD",
+    "DhahranAlJanoob": "RTC",
+    "Dhurma": "RTC",
+    "Diriyah": "RTD",
+    "DomatAlJandal": "RTC",
+    "Duba": "RTC",
+    "Duhknah": "RTD",
+    "DulayRashid": "RTC",
+    "Farasan": "RTD",
+    "Ghazalah": "RTC",
+    "Ghtai": "RTC",
+    "Gilwa": "RTC",
+    "Gizan": "RTC",
+    "Hadeethah": "RTC",
+    "HaferAlBatin": "RTC",
+    "Hail": "RTC",
+    "Hajrah": "RTC",
+    "HalatAmmar": "RTC",
+    "Hali": "RTC",
+    "Haqil": "RTD",
+    "Harad": "RTC",
+    "Harajah": "RTC",
+    "Hareeq": "RTC",
+    "HaweaTaif": "RTC",
+    "Haweyah": "RTC",
+    "HawtatBaniTamim": "RTC",
+    "HazmAlJalamid": "RTD",
+    "Hedeb": "RTD",
+    "Hinakeya": "RTD",
+    "Hofuf": "RTC",
+    "Horaimal": "RTC",
+    "HotatSudair": "RTC",
+    "Hubuna": "RTD",
+    "Huraymala": "RTC",
+    "Huroob": "RTD",
+    "Jaaraneh": "RTC & RTI",
+    "JaAraneh": "RTD",
+    "Jafar": "RTC",
+    "Jalajel": "RTD",
+    "Jeddah": "RTD",
+    "Jouf": "RTD",
+    "Jubail": "RTD",
+    "Kahlah": "RTD",
+    "Kara": "RTC",
+    "KaraA": "RTC",
+    "Karboos": "RTC",
+    "Khafji": "RTC",
+    "Khaibar": "RTD",
+    "Khairan": "RTC",
+    "Khamaseen": "RTD",
+    "KhamisMushait": "RTD",
+    "Kharj": "RTD",
+    "Khasawyah": "RTC",
+    "Khobar": "RTD",
+    "Khodaria": "RTC",
+    "Khulais": "RTC",
+    "KingAbdullahEconomicCity": "RTD",
+    "Kuhaybar": "RTD",
+    "Layla": "RTD",
+    "Lihyan": "RTC",
+    "Lith": "RTC",
+    "Majarda": "RTD",
+    "MakkahAlMukarramah": "RTC",
+    "Mandag": "RTD",
+    "MashaAlHadeed": "RTC",
+    "Mashar": "RTD",
+    "Mecca": "RTC",
+    "Midinhab": "RTC",
+    "Mizab": "RTC",
+    "Mubadala": "RTD",
+    "Mulayjah": "RTC",
+    "Muna": "RTC",
+    "Munifah": "RTD",
+    "Murayr": "RTD",
+    "Muzahmiah": "RTC",
+    "Najran": "RTC",
+    "Namas": "RTD",
+    "Nebyah": "RTD",
+    "Nimran": "RTD",
+    "Nisab": "RTC",
+    "Nmaas": "RTD",
+    "Noa": "RTC",
+    "Numira": "RTD",
+    "Nuqubah": "RTC",
+    "Omul Hala": "RTC",
+    "OmulRaka": "RTC",
+    "Onayzah": "RTD",
+    "Oula": "RTC",
+    "Ouwaydah": "RTD",
+    "Ozaizah": "RTD",
+    "Qadeemah": "RTD",
+    "QariyaAlOlya": "RTD",
+    "QasrAlHokm": "RTD",
+    "Qassab": "RTC",
+    "Qatif": "RTD",
+    "Qayra": "RTD",
+    "Qeiba": "RTC",
+    "Qeiteen": "RTC",
+    "Qissia": "RTD",
+    "Qunfudhah": "RTC",
+    "Qurayyat": "RTC",
+    "QurayyatAlMulayhan": "RTC",
+    "Rabigh": "RTD",
+    "Rahima": "RTD",
+    "Rahmaniya": "RTC",
+    "Ramah": "RTC",
+    "Rana": "RTC",
+    "Ranyah": "RTC",
+    "Rass": "RTC",
+    "RasTanura": "RTD",
+    "Rashraaf": "RTC",
+    "Riyadh": "RTI",
+    "RiyadhAlKhabra": "RTC",
+    "RiyadhAlkhubra": "RTC",
+    "RiyadhAlMusalla": "RTC",
+    "RiyadhAlNaseem": "RTC",
+    "RiyadhArRimal": "RTC",
+    "RiyadhAsSalam": "RTC",
+    "RiyadhUthman": "RTC",
+    "RiyadhYasmeen": "RTC",
+    "RiyadhZone": "RTC",
+    "Ruadah": "RTC",
+    "Rumaniyah": "RTD",
+    "Ruthwah": "RTC",
+    "Sabha": "RTC",
+    "Safaniyah": "RTD",
+    "Sahmiya": "RTC",
+    "Saida": "RTC",
+    "SaihAlHimma": "RTC",
+    "Saihat": "RTD",
+    "Sakaka": "RTC",
+    "Saleel": "RTD",
+    "Salwa": "RTC",
+    "Samoodah": "RTC",
+    "Samtah": "RTC",
+    "Sanamah": "RTD",
+    "Sayqiyah": "RTC",
+    "Shabrakah": "RTC",
+    "Shadqam": "RTD",
+    "Shamasiah": "RTD",
+    "Shaqra": "RTC",
+    "Shari": "RTC",
+    "Sharorah": "RTC",
+    "Shiyab": "RTC",
+    "Shuqaiq": "RTC",
+    "Shwaikh": "RTC",
+    "Sihma": "RTC",
+    "Sikkah": "RTC",
+    "Sokkaynah": "RTC",
+    "Sulaimania": "RTC",
+    "Sulayel": "RTC",
+    "Sur": "RTC",
+    "Tabarjal": "RTC",
+    "Tabuk": "RTC",
+    "Tafi": "RTD",
+    "Tagyah": "RTC",
+    "Tahlia": "RTC",
+    "Taif": "RTC",
+    "Tamir": "RTC",
+    "Tanumah": "RTC",
+    "Tarout": "RTD",
+    "Tarut": "RTD",
+    "Tathleeth": "RTC",
+    "Taybah": "RTC",
+    "Thadiq": "RTC",
+    "Tharmada": "RTC",
+    "Thurayban": "RTC",
+    "Tihama": "RTC",
+    "Towd": "RTC",
+    "Tumair": "RTC",
+    "Turabah": "RTC",
+    "Turaif": "RTC",
+    "UglatAsugur": "RTD",
+    "UglatHissin": "RTC",
+    "Uhaimir": "RTC",
+    "Unaizah": "RTC",
+    "Unayzah": "RTC",
+    "UqlatAlSoqur": "RTC",
+    "Uqur": "RTC",
+    "Usaylah": "RTC",
+    "Usfan": "RTC",
+    "Ushaiqer": "RTC",
+    "Ushaiqar": "RTC",
+    "Uthailah": "RTC",
+    "Utayfi": "RTC",
+    "WadiAlDawasir": "RTC",
+    "WadiAlFaraa": "RTC",
+    "WadiAlJamal": "RTC",
+    "WadiAdDawasir": "RTC",
+    "WadiAlHamra": "RTC",
+    "WadiAlSalaa": "RTC",
+    "WadiAdDiwasir": "RTC",
+    "Waed": "RTC & RTD",
+    "Wajh": "RTC",
+    "Yadamah": "RTC",
+    "Yanbu": "RTC",
+    "YanbuAlBahr": "RTC",
+    "YanbuAlNakhil": "RTC",
+    "YanbuAlSibyan": "RTC",
+    "Yudma": "RTC",
+    "Zamzam": "RTC",
+    "Zareer": "RTC",
+    "Zulfi": "RTC"
+
 }
 // Example usage
 const adjustedDatesValues = adjustDates();
 console.log(adjustedDatesValues);
 
 function adjustProductType(data) {
-        return citiesWithProductType[data]
+    return citiesWithProductType[data]
 }
 
 const aramexConfig = {
@@ -405,7 +393,6 @@ const aramexConfig = {
 };
 
 
-// Configuration for Aramex API
 
 const trackingConfig = {
     url: 'https://ws.aramex.net/ShippingAPI.V2/Tracking/Service_1_0.svc/json/TrackShipments',
@@ -442,17 +429,17 @@ async function getRefundRequestDetails(refund_order_id) {
             include: [
                 {
                     model: RefundItem,
-                    as: 'refundItems', // Alias for RefundItems association
+                    as: 'refundItems',
                     include: [
                         {
                             model: Product,
-                            as: 'product' // Alias for Product association in RefundItem
+                            as: 'product'
                         }
                     ]
                 },
                 {
                     model: Customer,
-                    as: 'customer' // Alias for Customer association
+                    as: 'customer'
                 }
             ]
         });
@@ -468,44 +455,40 @@ async function getRefundRequestDetails(refund_order_id) {
     }
 }
 function extractErrorText(htmlString) {
-    // Create a DOMParser instance
     const parser = new DOMParser();
-    
-    // Parse the HTML string
     const doc = parser.parseFromString(htmlString, 'text/html');
-    
-    // Log the parsed document to debug
-    console.log(doc.documentElement.outerHTML);
-    
-    // Select the <p> elements within the #content div
     const paragraphs = doc.querySelectorAll('#content p');
-    
-    // Log the paragraphs to debug
-    console.log(paragraphs);
-    
-    // Extract the text content from the paragraphs
     const errorText = Array.from(paragraphs).map(p => p.textContent.trim()).join(' ');
-  
-    // Return the combined error text or a default message if no paragraphs are found
     return errorText || 'Error text not found';
-  }
+}
+
+function extractShipmentData(response) {
+    if (response && response.ProcessedPickup && response.ProcessedPickup.ProcessedShipments && response.ProcessedPickup.ProcessedShipments.length > 0) {
+        const shipment = response.ProcessedPickup.ProcessedShipments[0];
+        return {
+            ID: shipment.ID,
+            LabelURL: shipment.ShipmentLabel.LabelURL
+        };
+    } else {
+        return null;
+    }
+}
 
 async function createPickup(refund_order_id) {
+    console.log('create shipment process started')
     try {
-        // Fetch refund request details
         const refundRequest = await getRefundRequestDetails(refund_order_id);
-        
+
         if (!refundRequest) {
             throw new Error(`RefundRequest with ID ${refund_order_id} not found`);
         }
 
-        // Extract necessary details from refundRequest
-        const { customer, refundItems } = refundRequest;
-        const { city, address, first_name, last_name, email, mobile_number } = customer;
+        const { customer, refundItems, city } = refundRequest;
+        const { address, first_name, last_name, email, mobile_number } = customer;
         const pickupAddress = address.split(','); // Assuming address is comma-separated
         const pickupAddressLine1 = pickupAddress[0] || "";
         const pickupAddressLine2 = pickupAddress[1] || "";
-        
+
         const payload = {
             "ClientInfo": {
                 "UserName": process.env.ARAMEX_USERNAME,
@@ -677,11 +660,11 @@ async function createPickup(refund_order_id) {
                             "Value": parseFloat(refundItems.reduce((total, item) => total + parseFloat(item.product.weight), 0)).toFixed(2),
                         },
                         "ChargeableWeight": null,
-                        "DescriptionOfGoods": refundItems.map(item => item.product.name).join(', '),
+                        "DescriptionOfGoods": "perfumes",
                         "GoodsOriginCountry": "SA",
                         "NumberOfPieces": refundItems.reduce((total, item) => total + item.quantity, 0),
                         "ProductGroup": "DOM",
-                        "ProductType": "RTC",
+                        "ProductType": adjustProductType(city) || "RTC",
                         "PaymentType": "C",
                         "PaymentOptions": "",
                         "CustomsValueAmount": null,
@@ -712,7 +695,7 @@ async function createPickup(refund_order_id) {
                 }],
                 "PickupItems": refundItems.map(item => ({
                     "ProductGroup": "DOM",
-                    "ProductType": "RTC",
+                    "ProductType": adjustProductType(city) || "RTC",
                     "NumberOfShipments": 1,
                     "PackageType": "Box",
                     "Payment": "C",
@@ -742,12 +725,26 @@ async function createPickup(refund_order_id) {
                 "Reference5": ""
             }
         };
-        
-        
 
-        const response = await axios.post(aramexConfig.url,payload, {
+
+
+        const response = await axios.post(aramexConfig.url, payload, {
             headers: aramexConfig.headers
         });
+
+
+        const { ID, LabelURL } = extractShipmentData(response.data)
+        if (refundRequest && ID && LabelURL) {
+            refundRequest.aramex_policy_number = ID;
+            await refundRequest.save();
+            await emailProcessor({data :{
+                to: 'hassnainahmed111222@gmail.com',
+                city: refundRequest.city,
+                returnRequestId: refundRequest.uuid,
+                aramexPolicyNumber: ID,
+                url: LabelURL
+            }});
+        }
         return response.data;
     } catch (error) {
         console.log('Error creating pickup:', error.response.data);
