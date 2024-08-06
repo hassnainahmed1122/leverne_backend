@@ -57,6 +57,7 @@ async function job1Processor(job) {
                 price: item.amounts.price_without_tax.amount,
                 thumbnail: item.product.thumbnail,
                 SKU: item.sku,
+                weight: item.weight,
                 tax: (item.amounts.tax.amount.amount / item.quantity).toFixed(2),
                 discount: (item.amounts.total_discount.amount / item.quantity).toFixed(2),
                 gtin: item.product.gtin,

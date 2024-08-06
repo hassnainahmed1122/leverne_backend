@@ -467,6 +467,28 @@ async function getRefundRequestDetails(refund_order_id) {
         throw error;
     }
 }
+function extractErrorText(htmlString) {
+    // Create a DOMParser instance
+    const parser = new DOMParser();
+    
+    // Parse the HTML string
+    const doc = parser.parseFromString(htmlString, 'text/html');
+    
+    // Log the parsed document to debug
+    console.log(doc.documentElement.outerHTML);
+    
+    // Select the <p> elements within the #content div
+    const paragraphs = doc.querySelectorAll('#content p');
+    
+    // Log the paragraphs to debug
+    console.log(paragraphs);
+    
+    // Extract the text content from the paragraphs
+    const errorText = Array.from(paragraphs).map(p => p.textContent.trim()).join(' ');
+  
+    // Return the combined error text or a default message if no paragraphs are found
+    return errorText || 'Error text not found';
+  }
 
 async function createPickup(refund_order_id) {
     try {
@@ -652,7 +674,7 @@ async function createPickup(refund_order_id) {
                         "Dimensions": null,
                         "ActualWeight": {
                             "Unit": "KG",
-                            "Value": 0.5
+                            "Value": parseFloat(refundItems.reduce((total, item) => total + parseFloat(item.product.weight), 0)).toFixed(2),
                         },
                         "ChargeableWeight": null,
                         "DescriptionOfGoods": refundItems.map(item => item.product.name).join(', '),
@@ -674,7 +696,7 @@ async function createPickup(refund_order_id) {
                             "Quantity": item.quantity,
                             "Weight": {
                                 "Unit": "Kg",
-                                "Value": 0.01
+                                "Value": item.product.weight
                             },
                             "Reference": item.gtin,
                             "GoodsDescription": item.description,
@@ -696,7 +718,7 @@ async function createPickup(refund_order_id) {
                     "Payment": "C",
                     "ShipmentWeight": {
                         "Unit": "KG",
-                        "Value": 0.5
+                        "Value": parseFloat(item.product.weight).toFixed(2)
                     },
                     "ShipmentVolume": null,
                     "NumberOfPieces": item.quantity,
@@ -726,11 +748,10 @@ async function createPickup(refund_order_id) {
         const response = await axios.post(aramexConfig.url,payload, {
             headers: aramexConfig.headers
         });
-        console.log('testing................', JSON.stringify(response.data))
         return response.data;
     } catch (error) {
-        console.error('Error creating pickup:', error.message);
-        throw new Error(`Error creating pickup: ${error.message}`);
+        console.log('Error creating pickup:', error.response.data);
+        throw new Error(`Error creating pickup: ${extractErrorText(error.response.data)}`);
     }
 }
 
