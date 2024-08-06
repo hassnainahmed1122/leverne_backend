@@ -11,6 +11,14 @@ async function job1Processor(job) {
 
     try {
         const orderDetails = await getOrderDetails(job.data.orderId);
+
+        const address = orderDetails.shipping.pickup_address.shipping_address;
+        if (address) {
+            await Customer.update(
+                { address: address },
+                { where: { id: job.data.customerId }, transaction }
+            );
+        }
         const totalDiscount = orderDetails.amounts.discounts.reduce((sum, item) => {
             return sum + parseFloat(item.discount);
         }, 0);

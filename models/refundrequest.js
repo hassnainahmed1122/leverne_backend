@@ -16,12 +16,12 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     uuid: {
-      type: DataTypes.STRING(8), // Changed to STRING with length 8
+      type: DataTypes.STRING(8),
       allowNull: false,
       unique: true,
       validate: {
-        len: [8, 8], // Ensures the uuid is exactly 8 characters long
-        isNumeric: true // Ensures uuid contains only digits
+        len: [8, 8],
+        isNumeric: true
       }
     },
     order_id: {
@@ -76,6 +76,10 @@ module.exports = (sequelize, DataTypes) => {
     bank_code: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    aramex_policy_number: {
+      type: DataTypes.STRING,
+      allowNull: true
     }
   }, {});
 
@@ -84,7 +88,6 @@ module.exports = (sequelize, DataTypes) => {
     RefundRequest.belongsTo(models.Order, { foreignKey: 'order_id', as: 'order' });
     RefundRequest.hasMany(models.RefundItem, { foreignKey: 'refund_request_id', as: 'refundItems' });
     RefundRequest.hasMany(models.TamaraRequest, { foreignKey: 'refund_request_id', as: 'tamaraRequests' });
-
   };
 
   return RefundRequest;

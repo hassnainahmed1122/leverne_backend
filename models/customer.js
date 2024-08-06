@@ -27,6 +27,10 @@ module.exports = (sequelize, DataTypes) => {
     city: {
       type: DataTypes.STRING,
       allowNull: true // Set to true if the city is optional, false otherwise
+    },
+    address: { // New column added here
+      type: DataTypes.STRING,
+      allowNull: true // Set to true if the address is optional, false otherwise
     }
   }, {});
 

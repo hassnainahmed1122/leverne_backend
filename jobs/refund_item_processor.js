@@ -14,19 +14,6 @@ const refundItemProcessor = async (job) => {
 
         await RefundItem.bulkCreate(refundItems, { transaction });
 
-        // for (const item of items) {
-        //     await OrderItem.update(
-        //         { quantity: sequelize.literal(`quantity - ${item.quantity}`) },
-        //         {
-        //             where: {
-        //                 product_id: item.product_id,
-        //                 order_id: job.data.orderId
-        //             },
-        //             transaction
-        //         }
-        //     );
-        // }
-
         await transaction.commit();
 
     } catch (err) {
