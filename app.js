@@ -5,6 +5,7 @@ const models = require('./models'); // Ensure models are imported
 const customerRoutes = require('./routes/customerRoutes');
 require('dotenv').config();
 require('./scheduler/reports_scheduler');
+require('./scheduler/aramex_update_scheduler');
 const jobQueue = require('./queues/jobQueue');
 const app = express();
 const port = process.env.PORT || 3000;

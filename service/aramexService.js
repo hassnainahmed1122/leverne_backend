@@ -1,6 +1,7 @@
 const axios = require('axios');
-const { RefundRequest, RefundItem, Product, sequelize, Customer } = require('../models')
+const { RefundRequest, RefundItem, Product, sequelize, Customer } = require('../models');
 const { emailProcessor } = require('../jobs/email_processor.js');
+const { processTamaraRequest } = require('../jobs/tamara_request_processor.js');
 
 function getNextWorkingDay(date) {
     let day = date.getDay();
@@ -737,13 +738,15 @@ async function createPickup(refund_order_id) {
         if (refundRequest && ID && LabelURL) {
             refundRequest.aramex_policy_number = ID;
             await refundRequest.save();
-            await emailProcessor({data :{
-                to: 'hassnainahmed111222@gmail.com',
-                city: refundRequest.city,
-                returnRequestId: refundRequest.uuid,
-                aramexPolicyNumber: ID,
-                url: LabelURL
-            }});
+            await emailProcessor({
+                data: {
+                    to: customer.email,
+                    city: refundRequest.city,
+                    returnRequestId: refundRequest.uuid,
+                    aramexPolicyNumber: ID,
+                    url: LabelURL
+                }
+            });
         }
         return response.data;
     } catch (error) {
@@ -752,18 +755,49 @@ async function createPickup(refund_order_id) {
     }
 }
 
-async function trackShipments(trackingNumbers) {
+const trackShipments = async (trackingNumbers) => {
     try {
         const response = await axios.post(trackingConfig.url, {
             ...trackingConfig.data,
-            Shipments: trackingNumbers
+            Shipments: trackingNumbers,
         }, {
-            headers: trackingConfig.headers
+            headers: trackingConfig.headers,
         });
-        return JSON.stringify(response.data);
+
+        const trackingResults = response.data.TrackingResults;
+
+        for (const result of trackingResults) {
+            const waybillNumber = result.Key;
+
+            const pickedUpStatus = result.Value.some(update =>
+                update.UpdateCode === "SH012" &&
+                update.UpdateDescription === "Picked Up From Shipper"
+            );
+
+            if (pickedUpStatus) {
+                const refundRequest = await RefundRequest.findOne({
+                    where: { aramex_policy_number: waybillNumber },
+                });
+
+                if (refundRequest) {
+                    try {
+                        await refundRequest.update({ return_status: "picked up" });
+                
+                        await processTamaraRequest({
+                            data: {
+                                refund_record_id: refundRequest.id,
+                            }
+                        });
+                    } catch (error) {
+                        console.error('Error processing Tamara request:', error);
+                    }
+                }
+            }
+        }
     } catch (error) {
         throw new Error(`Error tracking shipments: ${error.message}`);
     }
-}
+};
+
 
 module.exports = { createPickup, trackShipments };

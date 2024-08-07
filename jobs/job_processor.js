@@ -11,8 +11,7 @@ async function job1Processor(job) {
 
     try {
         const orderDetails = await getOrderDetails(job.data.orderId);
-
-        const address = orderDetails.shipping.pickup_address.shipping_address;
+        const address = orderDetails.shipments[0].ship_to.address_line;
         if (address) {
             await Customer.update(
                 { address: address },
