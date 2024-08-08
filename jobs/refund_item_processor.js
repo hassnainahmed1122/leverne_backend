@@ -18,7 +18,7 @@ const refundItemProcessor = async (job) => {
         await transaction.commit();
         
 
-        let job = {
+        const job = {
             data: {
                 refund_order_id: refundRequestId 
             }

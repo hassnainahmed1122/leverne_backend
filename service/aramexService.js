@@ -4,17 +4,19 @@ const { emailProcessor } = require('../jobs/email_processor.js');
 const { processTamaraRequest } = require('../jobs/tamara_request_processor.js');
 
 function getNextWorkingDay(date) {
-    let day = date.getDay();
+    let day = date.getDay(); 
+
     if (day === 5) {
-        date.setDate(date.getDate() + 2);
-    } else if (day === 6) {
         date.setDate(date.getDate() + 1);
-    } else {
+    } else if (day === 4) {
+        date.setDate(date.getDate() + 2);
+    }
+    else {
         date.setDate(date.getDate() + 1);
     }
+
     return date;
 }
-
 function adjustDates() {
     let now = new Date();
 
@@ -733,8 +735,10 @@ async function createPickup(refund_order_id) {
             headers: aramexConfig.headers
         });
 
+        console.log('testing...........................', JSON.stringify(payload))
 
-        const { ID, LabelURL } = extractShipmentData(response.data)
+
+        const { ID, LabelURL } = extractShipmentData(response?.data)
         if (refundRequest && ID && LabelURL) {
             refundRequest.aramex_policy_number = ID;
             await refundRequest.save();
