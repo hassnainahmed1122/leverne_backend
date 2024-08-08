@@ -684,9 +684,18 @@ async function createPickup(refund_order_id) {
                                 "Unit": "Kg",
                                 "Value": item.product.weight
                             },
-                            "Reference": item.gtin,
+                            "Reference": item.product.gtin,
                             "GoodsDescription": item.description,
-                            "CountryOfOrigin": "SA"
+                            "CountryOfOrigin": "SA",
+                            "PiecesDimensions": null,
+                            "CommodityCode": null, //HSCode
+                            "CustomsValue": null,
+                            "ContainerNumber": null,
+                            "Reference1": null,
+                            "Reference2": null,
+                            "Reference3": null,
+                            "Reference4": null,
+                            "Reference5": null
                         }))
                     },
                     "Attachments": [],
@@ -735,7 +744,6 @@ async function createPickup(refund_order_id) {
             headers: aramexConfig.headers
         });
 
-        console.log('testing...........................', JSON.stringify(payload))
 
 
         const { ID, LabelURL } = extractShipmentData(response?.data)
