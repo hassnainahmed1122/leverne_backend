@@ -8,10 +8,10 @@ require('./scheduler/reports_scheduler');
 require('./scheduler/aramex_update_scheduler');
 const jobQueue = require('./queues/jobQueue');
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT;
 
 const allowedOrigins = [
-  'http://localhost:3001',
+  'http://localhost:3000',
 ];
 
 const corsOptions = {
